@@ -522,32 +522,59 @@
         if (typeof initialLayer === "object") {
             this.applyLayer(initialLayer);
         }
+
+        Object.defineProperties(this, {
+            components: {
+                get: function*() {
+                    for (const item of this) {
+                        yield item;
+                    }
+                }.bind(this)
+            },
+            componentsContainers: {
+                get: function*() {
+
+                    function *recursiveProcess(obj) {
+                        for (const name of Object.getOwnPropertyNames(obj)) {
+                            if (obj[name] !== null && obj[name] !== undefined) {
+                                if (typeof obj[name][Symbol.iterator] === "function") {
+                                    if (obj[name] instanceof ComponentContainer) {
+                                        yield obj;
+                                    }
+                                    yield* recursiveProcess(obj);
+                                }
+                            }
+                        }
+                    }
+
+                    return recursiveProcess(this);
+                }.bind(this)
+            }
+        });
     };
     ComponentContainer.prototype = {
+        [Symbol.iterator]() {
+            function *recursiveProcess(obj) {
+                for (const name of Object.getOwnPropertyNames(obj)) {
+                    if (obj !== null && obj !== undefined) {
+                        if (obj[name] instanceof Component) {
+                            yield obj;
+                        } else if (typeof obj[Symbol.iterator] === "function") {
+                            yield* recursiveProcess(obj);
+                        }
+                    }
+                }
+            }
+
+            return recursiveProcess(this);
+        },
         forEachComponent: function(operation, recursive) {
             if (typeof operation !== "function") {
                 console.warn("ERROR: ComponentContainer.forEachComponent requires a function argument");
                 return;
             }
-            if (recursive === undefined) { recursive = true; }
-
-            const that = this;
-            var applyOperationTo = function(obj) {
-                if (obj instanceof Component) {
-                    operation.call(that, obj);
-                } else if (recursive && obj instanceof ComponentContainer) {
-                    obj.forEachComponent(operation);
-                } else if (Array.isArray(obj)) {
-                    obj.forEach(function(element) {
-                        applyOperationTo(element);
-                    });
-                }
-            };
-
-            for (const memberName in this) {
-                if (ComponentContainer.prototype.hasOwnProperty.call(this, memberName)) {
-                    applyOperationTo(this[memberName]);
-                }
+            for (const item of this) {
+                operation(item);
             }
         },
         forEachComponentContainer: function(operation, recursive) {
@@ -556,26 +583,8 @@
                 return;
             }
             if (recursive === undefined) { recursive = true; }
-
-            const that = this;
-            var applyOperationTo = function(obj) {
-                if (obj instanceof ComponentContainer) {
-                    operation.call(that, obj);
-
-                    if (recursive) {
-                        obj.forEachComponentContainer(operation);
-                    }
-                } else if (Array.isArray(obj)) {
-                    obj.forEach(function(element) {
-                        applyOperationTo(element);
-                    });
-                }
-            };
-
-            for (const memberName in this) {
-                if (ComponentContainer.prototype.hasOwnProperty.call(this, memberName)) {
-                    applyOperationTo(this[memberName]);
-                }
+            for (const item of this) {
+                operation(item);
             }
         },
         reconnectComponents: function(operation, recursive) {
@@ -1239,6 +1248,21 @@
         };
     };
     EffectUnit.prototype = new ComponentContainer();
+
+    const c = new components.ComponentContainer({
+        test: new components.ComponentContainer({
+            yolo: new components.ComponentContainer({
+                wee: new components.Button(),
+                wee2: new components.Button()
+            }),
+            wee3: new components.Button()
+        })
+    })
+    c.forEachComponent(it => {
+        console.error(stringifyObject(it));
+        it.group = "Coucou";
+    });
+    console.error(stringifyObject(c));
 
     const exports = {};
     exports.Component = Component;
