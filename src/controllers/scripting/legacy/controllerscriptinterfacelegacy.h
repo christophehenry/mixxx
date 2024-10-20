@@ -83,12 +83,12 @@ class ControllerScriptInterfaceLegacy : public QObject {
             const double rate = -10.0);
     Q_INVOKABLE void softStart(const int deck, bool activate, double factor = 1.0);
 
-    Q_INVOKABLE QByteArray convertCharset(
+    Q_INVOKABLE QJSValue convertCharset(
             const ControllerScriptInterfaceLegacy::WellKnownCharsets
                     targetCharset,
             const QString& value);
 
-    Q_INVOKABLE QByteArray convertCharset(const QString& targetCharset, const QString& value);
+    Q_INVOKABLE QJSValue convertCharset(const QString& targetCharset, const QString& value);
 
     bool removeScriptConnection(const ScriptConnection& conn);
     /// Execute a ScriptConnection's JS callback
