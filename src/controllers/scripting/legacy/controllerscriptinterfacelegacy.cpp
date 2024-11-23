@@ -1074,18 +1074,19 @@ QByteArray ControllerScriptInterfaceLegacy::convertCharset(
 
 QByteArray ControllerScriptInterfaceLegacy::convertCharset(
         const QString& targetCharset, const QString& value) {
+    QByteArray encoderNameArray = targetCharset.toUtf8();
 #if QT_VERSION < QT_VERSION_CHECK(6, 4, 0)
-    auto* pCodec = QTextCodec::codecForName(targetCharset.toUtf8());
+    auto* pCodec = QTextCodec::codecForName(encoderNameArray);
     if (!pCodec) {
         m_pScriptEngineLegacy->logOrThrowError(QStringLiteral("Unable to open encoder"));
         return QByteArray();
     }
     return pCodec->makeEncoder(QTextCodec::Flag::ConvertInvalidToNull)->fromUnicode(value);
 #else
-#if QT_VERSION > QT_VERSION_CHECK(6, 8, 0)
-    const auto* const encoderName = targetCharset.data();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    QAnyStringView encoderName = QAnyStringView(encoderNameArray);
 #else
-    auto* const encoderName = targetCharset.toUtf8().data();
+    const char* encoderName = encoderNameArray.constData();
 #endif
     QStringEncoder fromUtf16 = QStringEncoder(
             encoderName, QStringEncoder::Flag::ConvertInvalidToNull);
